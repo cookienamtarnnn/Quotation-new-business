@@ -79,7 +79,7 @@ tbody tr{background:var(--light)}
 <div id="pdf">
 <div style="display:flex;justify-content:space-between;align-items:flex-start">
 <div>
-<img src="assets/cheetech-logo.png" class="logo">
+<img src="cheetech-logo.jpg" class="logo">
 </div>
 <div>
 <h2>QUOTATION</h2>
