@@ -20,6 +20,21 @@ h1{color:var(--primary-dark)}
 input,textarea{width:100%;padding:10px;border:1px solid #cde9dc;border-radius:8px}
 button{background:var(--primary);color:#fff;border:none;padding:12px 18px;border-radius:8px;cursor:pointer}
 table{width:100%;border-collapse:collapse}
+#pdf table{
+ width:100%;
+ border-collapse:collapse;
+ table-layout:fixed;
+}
+.pdf-item-table{
+ height:auto;
+}
+.pdf-page + .pdf-page{
+ page-break-before:always;
+}
+.terms-sign{
+ page-break-inside:avoid;
+ break-inside:avoid;
+}
 th{background:var(--primary);color:white;padding:10px}
 td{padding:8px;border-bottom:1px solid #e6f4ed}
 tbody tr{background:var(--light)}
@@ -37,15 +52,15 @@ tbody tr{background:var(--light)}
 <div class="container">
 <div class="card">
 <h1>CHEETECH Quotation Generator</h1>
-<p>Replace <b>assets/cheetech-logo.png</b> with your official transparent logo.</p>
+<p>Replace <b>cheetech-logo.png</b> with your official transparent logo.</p>
 </div>
 
 <div class="card">
 <div class="grid">
 <input id="customer" placeholder="Customer Name">
 <input id="company" placeholder="Company">
-<input id="phone" placeholder="Phone">
-<input id="taxid" placeholder="Tax ID">
+<input id="phone" placeholder="Phone" inputmode="numeric" maxlength="12">
+<input id="taxid" placeholder="Tax ID" inputmode="numeric" maxlength="13">
 </div>
 <br>
 <textarea id="address" rows="3" placeholder="Address"></textarea>
@@ -59,6 +74,7 @@ tbody tr{background:var(--light)}
 <th>Qty</th>
 <th>Unit Price</th>
 <th>Total</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody id="rows"></tbody>
@@ -79,29 +95,29 @@ tbody tr{background:var(--light)}
 <div id="pdf">
 <div style="display:flex;justify-content:space-between;align-items:flex-start">
 <div>
-<img src="cheetech-logo.jpg" class="logo">
+<img src="cheetech-logo.png" class="logo">
 </div>
 <div style="text-align:right">
-    <h2 style="color:#1CB078;margin-bottom:15px">
-        QUOTATION
-    </h2>
+<h2 style="color:#1CB078;margin-bottom:15px">
+QUOTATION
+</h2>
 
-    <div style="line-height:1.8">
-        Viranya,<br>
-        Kingkaew 29<br>
-        Samut Prakarn 10540<br>
+<div style="line-height:1.8">
+Viranya,<br>
+Kingkaew 29<br>
+Samut Prakarn 10540<br>
 
-        <a
-            href="mailto:Cheetechlogistics@gmail.com"
-            style="color:#1CB078"
-        >
-            Cheetechlogistics@gmail.com
-        </a>
-    </div>
+<a
+href="mailto:Cheetechlogistics@gmail.com"
+style="color:#1CB078"
+>
+Cheetechlogistics@gmail.com
+</a>
+</div>
 
-    <br>
+<br>
 
-    <div id="qno"></div>
+<div id="qno"></div>
 </div>
 </div>
 
@@ -110,55 +126,7 @@ tbody tr{background:var(--light)}
 <h3>Customer Information</h3>
 <div id="custinfo"></div>
 
-<table
-    style="
-        width:100%;
-        margin-top:20px;
-        border-collapse:collapse;
-    "
->
-<thead>
-<tr>
-<th>Description</th>
-<th>Qty</th>
-<th>Unit Price</th>
-<th>Total</th>
-</tr>
-</thead>
-<tbody id="pdfrows"></tbody>
-<tfoot>
-<tr style="background:#1CB078;color:white">
-<td colspan="3">Grand Total (VAT Included)</td>
-<td id="pdfgrand"></td>
-</tr>
-</tfoot>
-</table>
-
-<div style="margin-top:50px">
-<b>Terms & Conditions</b><br>
-Validity: 30 Days<br>
-Payment Terms: 30 Days After Invoice
-</div>
-
-<div
-    style="
-    margin-top:80px;
-    text-align:right;
-    width:250px;
-    margin-left:auto;
-">
-    <div
-        style="
-        border-top:2px solid #1CB078;
-        padding-top:10px;
-    ">
-        <strong>Sunita</strong><br>
-
-        <span style="font-size:13px">
-            Supply Chain Manager · CHEETECH
-        </span>
-    </div>
-</div>
+<div id="pdfpages"></div>
 </div>
 
 <script>
@@ -184,6 +152,7 @@ function render(){
     <td><input type="number" value="${r.q}" onchange="data[${i}].q=parseFloat(this.value)||0;render()"></td>
     <td><input type="number" value="${r.p}" onchange="data[${i}].p=parseFloat(this.value)||0;render()"></td>
     <td>${fmt(total)}</td>
+    <td><button type="button" onclick="removeRow(${i})">Delete</button></td>
    </tr>`;
  });
 
@@ -199,25 +168,118 @@ function fmt(v){
  return new Intl.NumberFormat('en-US',{style:'currency',currency:'THB'}).format(v);
 }
 
+function removeRow(i){
+ if(data.length===1){
+  data[0]={d:'',q:1,p:0};
+ }else{
+  data.splice(i,1);
+ }
+ render();
+}
+
+function digitsOnly(v,maxLen){
+ return v.replace(/\D/g,'').slice(0,maxLen);
+}
+
+function formatPhone(v){
+ const d=digitsOnly(v,11);
+ if(d.length<=3) return d;
+ if(d.length<=6) return `${d.slice(0,3)}-${d.slice(3)}`;
+ return `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6,10)}`;
+}
+
+document.getElementById('phone').addEventListener('input',e=>{
+ e.target.value=formatPhone(e.target.value);
+});
+
+document.getElementById('taxid').addEventListener('input',e=>{
+ e.target.value=digitsOnly(e.target.value,13);
+});
+
 function preview(){
  let subtotal=0;
- const pdfrows=document.getElementById('pdfrows');
- pdfrows.innerHTML='';
+ const rowsPerPage=6;
+ const pdfpages=document.getElementById('pdfpages');
+ pdfpages.innerHTML='';
 
  data.forEach(r=>{
-   let t=r.q*r.p;
-   subtotal+=t;
-   pdfrows.innerHTML+=`<tr>
+   subtotal+=r.q*r.p;
+ });
+
+ const grand=subtotal*1.07;
+ const totalPages=Math.max(1,Math.ceil(data.length/rowsPerPage));
+
+ for(let p=0;p<totalPages;p++){
+  const start=p*rowsPerPage;
+  const end=start+rowsPerPage;
+  const chunk=data.slice(start,end);
+  const rowsHtml=chunk.map(r=>{
+   const t=r.q*r.p;
+   return `<tr>
    <td>${r.d}</td>
    <td>${r.q}</td>
    <td>${fmt(r.p)}</td>
    <td>${fmt(t)}</td>
    </tr>`;
- });
+  }).join('');
+  const isLastPage=p===totalPages-1;
 
- const grand=subtotal*1.07;
+  pdfpages.innerHTML+=`
+  <div class="pdf-page">
+  <table
+  class="pdf-item-table"
+  style="
+  width:100%;
+  margin-top:20px;
+  border-collapse:collapse;
+  "
+  >
+  <thead>
+  <tr>
+  <th>Description</th>
+  <th>Qty</th>
+  <th>Unit Price</th>
+  <th>Total</th>
+  </tr>
+  </thead>
+  <tbody>${rowsHtml}</tbody>
+  ${isLastPage?`<tfoot>
+  <tr style="background:#1CB078;color:white">
+  <td colspan="3">Grand Total (VAT Included)</td>
+  <td>${fmt(grand)}</td>
+  </tr>
+  </tfoot>`:''}
+  </table>
 
- document.getElementById('pdfgrand').innerText=fmt(grand);
+  ${isLastPage?`<div class="terms-sign" style="margin-top:50px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
+  <div>
+  <b>Terms & Conditions</b><br>
+  Validity: 30 Days<br>
+  Payment Terms: 30 Days After Invoice
+  </div>
+
+  <div
+  style="
+  text-align:right;
+  width:250px;
+  margin-left:auto;
+  ">
+  <div
+  style="
+  border-top:2px solid #1CB078;
+  padding-top:10px;
+  ">
+  <strong>Sunita</strong><br>
+
+  <span style="font-size:13px">
+  Supply Chain Manager - CHEETECH
+  </span>
+  </div>
+  </div>
+  </div>`:''}
+  </div>`;
+ }
+
  document.getElementById('qno').innerText='QT-'+new Date().toISOString().slice(0,10).replaceAll('-','');
 
  document.getElementById('custinfo').innerHTML=`
