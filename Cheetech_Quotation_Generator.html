@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cheetech Quotation Generator</title>
+<style>
+:root{
+ --primary:#1CB078;
+ --primary-dark:#128A5F;
+ --light:#DEFAEF;
+ --text:#1F2937;
+}
+*{box-sizing:border-box;font-family:Segoe UI,Arial,sans-serif}
+body{background:#f7fcf9;margin:0;padding:20px;color:var(--text)}
+.container{max-width:1200px;margin:auto}
+.card{background:#fff;border:1px solid #d8f2e6;border-radius:12px;padding:20px;margin-bottom:20px}
+h1{color:var(--primary-dark)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+input,textarea{width:100%;padding:10px;border:1px solid #cde9dc;border-radius:8px}
+button{background:var(--primary);color:#fff;border:none;padding:12px 18px;border-radius:8px;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+th{background:var(--primary);color:white;padding:10px}
+td{padding:8px;border-bottom:1px solid #e6f4ed}
+tbody tr{background:var(--light)}
+.totalbox{text-align:right;font-weight:bold;font-size:18px}
+#pdf{display:none;background:white;padding:40px}
+.logo{max-height:90px}
+.summary td{font-weight:bold}
+@media print{
+ body>*:not(#pdf){display:none!important}
+ #pdf{display:block!important}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="card">
+<h1>CHEETECH Quotation Generator</h1>
+<p>Replace <b>assets/cheetech-logo.png</b> with your official transparent logo.</p>
+</div>
+
+<div class="card">
+<div class="grid">
+<input id="customer" placeholder="Customer Name">
+<input id="company" placeholder="Company">
+<input id="phone" placeholder="Phone">
+<input id="taxid" placeholder="Tax ID">
+</div>
+<br>
+<textarea id="address" rows="3" placeholder="Address"></textarea>
+</div>
+
+<div class="card">
+<table id="tbl">
+<thead>
+<tr>
+<th>Description</th>
+<th>Qty</th>
+<th>Unit Price</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody id="rows"></tbody>
+</table>
+<br>
+<button onclick="addRow()">Add Row</button>
+
+<table class="summary" style="margin-top:20px">
+<tr><td>Subtotal</td><td id="subtotal">฿0.00</td></tr>
+<tr><td>VAT 7%</td><td id="vat">฿0.00</td></tr>
+<tr><td>Grand Total</td><td id="grand">฿0.00</td></tr>
+</table>
+<br>
+<button onclick="preview()">Preview / Print PDF</button>
+</div>
+</div>
+
+<div id="pdf">
+<div style="display:flex;justify-content:space-between;align-items:flex-start">
+<div>
+<img src="assets/cheetech-logo.png" class="logo">
+</div>
+<div>
+<h2>QUOTATION</h2>
+<div id="qno"></div>
+</div>
+</div>
+
+<hr style="border:2px solid #1CB078">
+
+<h3>Customer Information</h3>
+<div id="custinfo"></div>
+
+<table style="width:100%;margin-top:20px;border-collapse:collapse">
+<thead>
+<tr>
+<th>Description</th>
+<th>Qty</th>
+<th>Unit Price</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody id="pdfrows"></tbody>
+<tfoot>
+<tr style="background:#1CB078;color:white">
+<td colspan="3">Grand Total (VAT Included)</td>
+<td id="pdfgrand"></td>
+</tr>
+</tfoot>
+</table>
+
+<div style="margin-top:50px">
+<b>Terms & Conditions</b><br>
+Validity: 30 Days<br>
+Payment Terms: 30 Days After Invoice
+</div>
+
+<div style="margin-top:80px;text-align:right">
+_________________________<br>
+Authorized Signature
+</div>
+</div>
+
+<script>
+let data=[];
+
+function addRow(){
+ data.push({d:'',q:1,p:0});
+ render();
+}
+
+function render(){
+ const body=document.getElementById('rows');
+ body.innerHTML='';
+ let subtotal=0;
+
+ data.forEach((r,i)=>{
+   const total=r.q*r.p;
+   subtotal+=total;
+
+   body.innerHTML+=`
+   <tr>
+    <td><input value="${r.d}" onchange="data[${i}].d=this.value"></td>
+    <td><input type="number" value="${r.q}" onchange="data[${i}].q=parseFloat(this.value)||0;render()"></td>
+    <td><input type="number" value="${r.p}" onchange="data[${i}].p=parseFloat(this.value)||0;render()"></td>
+    <td>${fmt(total)}</td>
+   </tr>`;
+ });
+
+ const vat=subtotal*0.07;
+ const grand=subtotal+vat;
+
+ document.getElementById('subtotal').innerText=fmt(subtotal);
+ document.getElementById('vat').innerText=fmt(vat);
+ document.getElementById('grand').innerText=fmt(grand);
+}
+
+function fmt(v){
+ return new Intl.NumberFormat('en-US',{style:'currency',currency:'THB'}).format(v);
+}
+
+function preview(){
+ let subtotal=0;
+ const pdfrows=document.getElementById('pdfrows');
+ pdfrows.innerHTML='';
+
+ data.forEach(r=>{
+   let t=r.q*r.p;
+   subtotal+=t;
+   pdfrows.innerHTML+=`<tr>
+   <td>${r.d}</td>
+   <td>${r.q}</td>
+   <td>${fmt(r.p)}</td>
+   <td>${fmt(t)}</td>
+   </tr>`;
+ });
+
+ const grand=subtotal*1.07;
+
+ document.getElementById('pdfgrand').innerText=fmt(grand);
+ document.getElementById('qno').innerText='QT-'+new Date().toISOString().slice(0,10).replaceAll('-','');
+
+ document.getElementById('custinfo').innerHTML=`
+ <b>${customer.value}</b><br>
+ ${company.value}<br>
+ ${phone.value}<br>
+ ${taxid.value}<br>
+ ${address.value}`;
+
+ window.print();
+}
+
+addRow();
+</script>
+</body>
+</html>
